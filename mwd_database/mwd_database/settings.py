@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-_^7adekj3k0rdt&^h*67h0w_4+cx-k(5!kki-^!d_g==o-8nak
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', '192.168.43.143']
+ALLOWED_HOSTS = ['127.0.0.1', '192.168.8.102']
 
 
 # Application definition
@@ -72,15 +72,15 @@ WSGI_APPLICATION = 'mwd_database.wsgi.application'
 
 
 DATABASES = {
-'default': {
-'ENGINE': 'django.db.backends.postgresql_psycopg2',
-'NAME': 'mwd_db',
-'USER': 'ainur2511',
-'PASSWORD': 'Fellini89',
-'HOST': '127.0.0.1',
-'PORT': '5432'
-}
-}
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'mwd_db',
+        'USER': 'ainur2511',
+        'PASSWORD': 'Fellini89',
+        'HOST': '127.0.0.1',
+        'PORT': '5432'
+        }
+    }
 
 
 # Password validation
