@@ -1,0 +1,22 @@
+{% extends 'admin/base.html' %}
+
+{% block content %}
+    <div>
+        <form action="" method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <p> Новая категория будет выбрана для следующих элементов</p>
+            {% for obj in queryset %}
+                <p>{{ obj.equipment_name }}</p>
+            {% endfor %}
+            <div class="submit-row">
+                <input type="hidden" name="action" value="change_category">
+                <input type="submit" name="apply" value="Изменить">
+                <input type="submit" name="cancel" value="Отменить действия">
+            </div>
+        </form>
+    </div>
+    <div>
+
+    </div>
+{% endblock content %}

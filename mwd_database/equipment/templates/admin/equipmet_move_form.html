@@ -1,0 +1,19 @@
+{% extends 'admin/base.html' %}
+
+{% block content %}
+    <div>
+        <form action="" method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <p> Cледующиe элементы будут перемещены: </p>
+            {% for obj in queryset %}
+                <p>{{ obj.equipment_type }} № {{ obj.serial_number }}</p>
+            {% endfor %}
+            <div class="submit-row">
+                <input type="hidden" name="action" value="move_equipment">
+                <input type="submit" name="apply" value="Переместить">
+                <input type="submit" name="cancel" value="Отмена">
+            </div>
+        </form>
+    </div>
+{% endblock content %}

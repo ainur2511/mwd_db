@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="dataSourceStorageLocal" created-in="PY-233.14475.56">
+    <data-source name="mwd_db" uuid="96fde243-8a54-4314-b936-f39df44cdf54">
+      <database-info product="" version="" jdbc-version="" driver-name="" driver-version="" dbms="POSTGRES" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>ainur2511</user-name>
+      <schema-mapping />
+    </data-source>
+  </component>
+</project>
