@@ -16,7 +16,8 @@ SECRET_KEY = 'django-insecure-_^7adekj3k0rdt&^h*67h0w_4+cx-k(5!kki-^!d_g==o-8nak
 DEBUG = True
 
 INTERNAL_IPS = ['127.0.0.1', ]
-ALLOWED_HOSTS = ['127.0.0.1', '192.168.8.102']
+ALLOWED_HOSTS = ["*", 'charily-driving-hyena.cloudpub.ru']
+CSRF_TRUSTED_ORIGINS = ['https://charily-driving-hyena.cloudpub.ru']
 
 
 # Application definition
@@ -29,7 +30,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'equipment.apps.EquipmentConfig',
+    'staff.apps.StaffConfig',
     'debug_toolbar',
+    'django_admin_multi_select_filter',
 ]
 
 MIDDLEWARE = [
@@ -111,6 +114,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

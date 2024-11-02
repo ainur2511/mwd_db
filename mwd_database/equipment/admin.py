@@ -1,11 +1,24 @@
 from django.contrib import admin
-from django.db.models.options import Options
-from django.http import HttpResponseRedirect, HttpResponse
-from django.shortcuts import render, redirect
-from django.urls import reverse
-from .forms import EquipmentCategoryChangeForm, EquipmentMoveForm
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from .forms import EquipmentMoveForm
+from django_admin_multi_select_filter.filters import MultiSelectFieldListFilter
 
 from .models import *
+
+
+class TagFilter(admin.SimpleListFilter):
+    title = 'Теги'
+    parameter_name = 'tags'
+
+    def lookups(self, request, model_admin):
+        tags = Tag.objects.all()
+        return [(tag.id, tag.name) for tag in tags]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(equipment_type__tags__id=self.value())
+        return queryset
 
 
 class EquipmentAdmin(admin.ModelAdmin):
@@ -15,9 +28,11 @@ class EquipmentAdmin(admin.ModelAdmin):
                     'location',
                     'vendor',
                     'inventory_number',
+                    'get_total_circulation',
                     ]
     list_max_show_all = 15
-    list_filter = ('equipment_type', 'location')
+    list_filter = ('equipment_type', 'location', TagFilter)
+
 
     @admin.action(description='Переместить оборудование')
     def move_equipment(self, request, queryset):
@@ -45,6 +60,11 @@ class EquipmentAdmin(admin.ModelAdmin):
 class EquipmentInline(admin.TabularInline):
     model = Equipment
     extra = 0
+    fields = ('equipment_type', 'serial_number',)
+    readonly_fields = ['equipment_type', 'serial_number', ]
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class LocationAdmin(admin.ModelAdmin):
@@ -56,72 +76,40 @@ class CategoryInline(admin.StackedInline):
     extra = 0
 
 
+@admin.register(AssemblyRunTime)
+class AssemblyRunTimeAdmin(admin.ModelAdmin):
+    list_display = ('equipment', 'circulation', 'meters', 'operation_date', 'user', )
+
+
 class EquipmentTypeAdmin(admin.ModelAdmin):
-    actions = ['change_category', ]
-    list_display = ['equipment_name', 'category'
+    actions = []
+    list_display = ['equipment_name', 'get_tags'
                     ]
-    list_filter = [('category', admin.RelatedOnlyFieldListFilter)]
-    inlines = [CategoryInline]
+    filter_horizontal = ('tags',)
+
+    def get_tags(self, obj):
+        return ", ".join([tag.name for tag in obj.tags.all()])  # Получаем имена тегов
+
+    get_tags.short_description = 'Теги'  # Заголовок колонки в админке
+    list_filter = [('tags__name', MultiSelectFieldListFilter)]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field == 'category':
             kwargs['queryset'] = EquipmentType.objects.all()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-    @admin.action(description='Изменить категорию')
-    def change_category(self, request, queryset):
-        form = None
-        if 'apply' in request.POST:
-            print(request.POST)
-            form = EquipmentCategoryChangeForm(request.POST)
-            if form.is_valid():
-                new_category = form.cleaned_data['category']
-                print(form.cleaned_data)
-                for obj in queryset:
-                    print(obj)
-                    obj.category = new_category
-                    obj.save()
-                self.message_user(request, 'Категории изменены')
-                return HttpResponseRedirect(request.get_full_path())
-        if 'cancel' in request.POST:
-            return HttpResponseRedirect(request.get_full_path())
-        if not form:
-            form = EquipmentCategoryChangeForm(initial={'_selected_action': queryset.values_list('id', flat=True)})
 
-        return render(request, 'admin/change_parent_category.html', {'form': form, 'queryset': queryset, 'title': u'Изменение категории'})
-
-
-
-
-    # @admin.display(description='Оборудование')
-    # def get_threaded_connection(self, obj):
-    #     return obj.threaded_connection.thread_type
-
-    # @admin.display(description='Категория')
-    # def get_category(self, obj):
-    #     return obj.equipment_category.category
-
-    # list_max_show_all = 15
-
-
-# class OperatingTimeAdmin(admin.ModelAdmin):
-#     list_display = ['get_equipment_name',
-#                     'circulation',
-#                     'meters',
-#                     'screw_up',
-#                     'operating_date'
-#                     ]
-#
-#     @admin.display(description='')
-#     def get_equipment_name(self, obj):
-#         return f'{str(obj.equipment.equipment_type)} № {str(obj.equipment.serial_number)}'
-#
-#
-#     list_max_show_all = 15
+class TotalOperatingTimeAdmin(admin.ModelAdmin):
+    list_display = ['equipment_name', 'total_circulation', 'total_meters', 'changed_at']
+    ordering = ['-changed_at']
 
 
 admin.site.register(EquipmentType, EquipmentTypeAdmin)
-admin.site.register(Vendor)
 admin.site.register(ThreadConnection)
 admin.site.register(Location, LocationAdmin)
 admin.site.register(Equipment, EquipmentAdmin)
+admin.site.register(TotalOperatingTime, TotalOperatingTimeAdmin)
+
+admin.site.site_header = 'ALGIS MWD Database'
+admin.site.site_title = 'ALGIS MWD'
+admin.site.index_title = 'Управление сайтом'
