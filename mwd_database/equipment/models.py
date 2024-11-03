@@ -8,13 +8,17 @@ from django.db.models import ForeignKey
 
 class Equipment(models.Model):
     """ Экземпляр оборудования """
+
+    STATUS_CHOICES = (('STOP', 'СТОП!'),
+                      ('NORMAL', 'НОРМА'),
+                      ('REPAIR', 'В ремонте'))
     equipment_type: ForeignKey = models.ForeignKey('EquipmentType', verbose_name='Тип оборудования',
                                                    on_delete=models.CASCADE, related_name='equipments')
     serial_number = models.CharField(max_length=25, verbose_name='Заводской номер')
     inventory_number = models.CharField(max_length=25, verbose_name='Инвентарный номер')
     vendor = models.ForeignKey('Vendor', verbose_name='Производитель', on_delete=models.CASCADE)
     location = models.ForeignKey('Location', verbose_name='Местонахождение', on_delete=models.CASCADE)
-
+    stop_status = models.CharField(verbose_name='Стоп-статус', default='NORMAL', choices=STATUS_CHOICES)
     def get_total_circulation(self):
         total_operating_time = getattr(self, 'totaloperatingtime', None)  # Используем правильное имя
         if total_operating_time:

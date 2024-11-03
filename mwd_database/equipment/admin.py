@@ -29,6 +29,7 @@ class EquipmentAdmin(admin.ModelAdmin):
                     'vendor',
                     'inventory_number',
                     'get_total_circulation',
+                    'stop_status',
                     ]
     list_max_show_all = 15
     list_filter = ('equipment_type', 'location', TagFilter)

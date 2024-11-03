@@ -31,8 +31,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'equipment.apps.EquipmentConfig',
     'staff.apps.StaffConfig',
+    'mro_services.apps.MroServicesConfig',
     'debug_toolbar',
     'django_admin_multi_select_filter',
+
 ]
 
 MIDDLEWARE = [
