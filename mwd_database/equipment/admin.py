@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
+from simple_history.admin import SimpleHistoryAdmin
+
 from .forms import EquipmentMoveForm
 from django_admin_multi_select_filter.filters import MultiSelectFieldListFilter
 
@@ -21,7 +23,8 @@ class TagFilter(admin.SimpleListFilter):
         return queryset
 
 
-class EquipmentAdmin(admin.ModelAdmin):
+@admin.register(Equipment)
+class EquipmentAdmin(SimpleHistoryAdmin):
     actions = ['move_equipment', ]
     list_display = ['equipment_type',
                     'serial_number',
@@ -61,6 +64,7 @@ class EquipmentAdmin(admin.ModelAdmin):
 class EquipmentInline(admin.TabularInline):
     model = Equipment
     extra = 0
+    max_num = 0
     fields = ('equipment_type', 'serial_number',)
     readonly_fields = ['equipment_type', 'serial_number', ]
 
@@ -68,21 +72,28 @@ class EquipmentInline(admin.TabularInline):
         return False
 
 
-class LocationAdmin(admin.ModelAdmin):
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+
+
+@admin.register(Location)
+class LocationAdmin(SimpleHistoryAdmin):
     inlines = [EquipmentInline]
 
-
-class CategoryInline(admin.StackedInline):
-    model = EquipmentType
-    extra = 0
-
-
-@admin.register(AssemblyRunTime)
-class AssemblyRunTimeAdmin(admin.ModelAdmin):
-    list_display = ('equipment', 'circulation', 'meters', 'operation_date', 'user', )
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'well_number':
+            kwargs['queryset'] = Well.objects.filter(is_active=True)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-class EquipmentTypeAdmin(admin.ModelAdmin):
+@admin.register(Well)
+class WellAdmin(SimpleHistoryAdmin):
+    list_display = ('well_number', 'created_at', 'updated_at', 'is_active')
+
+
+@admin.register(EquipmentType)
+class EquipmentTypeAdmin(SimpleHistoryAdmin):
     actions = []
     list_display = ['equipment_name', 'get_tags'
                     ]
@@ -100,16 +111,28 @@ class EquipmentTypeAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-class TotalOperatingTimeAdmin(admin.ModelAdmin):
+class AssemblyRunTimeInline(admin.TabularInline):
+    model = AssemblyRunTime
+    extra = 0
+    fields = ('equipment', 'circulation', 'meters', 'operation_date', 'user',)
+    readonly_fields = ['equipment',]
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(TotalOperatingTime)
+class TotalOperatingTimeAdmin(SimpleHistoryAdmin):
     list_display = ['equipment_name', 'total_circulation', 'total_meters', 'changed_at']
+    readonly_fields = ['equipment_name', 'total_circulation', 'total_meters']
     ordering = ['-changed_at']
+    inlines = [AssemblyRunTimeInline]
 
 
-admin.site.register(EquipmentType, EquipmentTypeAdmin)
-admin.site.register(ThreadConnection)
-admin.site.register(Location, LocationAdmin)
-admin.site.register(Equipment, EquipmentAdmin)
-admin.site.register(TotalOperatingTime, TotalOperatingTimeAdmin)
+@admin.register(AssemblyRunTime)
+class AssemblyRunTimeAdmin(SimpleHistoryAdmin):
+    list_display = ('equipment', 'circulation', 'meters', 'operation_date', 'user', )
+
 
 admin.site.site_header = 'ALGIS MWD Database'
 admin.site.site_title = 'ALGIS MWD'

@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import ForeignKey
+from simple_history.models import HistoricalRecords
 
 
 class Equipment(models.Model):
@@ -19,6 +20,7 @@ class Equipment(models.Model):
     vendor = models.ForeignKey('Vendor', verbose_name='Производитель', on_delete=models.CASCADE)
     location = models.ForeignKey('Location', verbose_name='Местонахождение', on_delete=models.CASCADE)
     stop_status = models.CharField(verbose_name='Стоп-статус', default='NORMAL', choices=STATUS_CHOICES)
+    history = HistoricalRecords()
     def get_total_circulation(self):
         total_operating_time = getattr(self, 'totaloperatingtime', None)  # Используем правильное имя
         if total_operating_time:
@@ -33,16 +35,10 @@ class Equipment(models.Model):
         unique_together = ('equipment_type', 'serial_number',)
 
 
-class Property(models.Model):
-    equipment = models.ForeignKey(Equipment, verbose_name='Оборо', on_delete=models.CASCADE)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey('content_type', 'object_id')
-
-
 class Vendor(models.Model):
     """Производитель оборудования"""
     vendor_name = models.CharField(verbose_name='Производитель', max_length=150, unique=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.vendor_name
@@ -54,6 +50,7 @@ class Vendor(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(verbose_name='Тег', max_length=50, unique=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -67,6 +64,7 @@ class EquipmentType(models.Model):
     """Каталог оборудования, из которых мы создаем конкретный экземпляр оборудования"""
     equipment_name = models.CharField(max_length=100, unique=True, verbose_name='Наименование оборудования')
     tags = models.ManyToManyField(Tag, verbose_name='Теги', blank=True, related_name='equipment_types')
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.equipment_name
@@ -94,12 +92,35 @@ class ThreadConnection(models.Model):
         verbose_name_plural = 'Замковые резьбы'
 
 
+class Well(models.Model):
+    well_number = models.CharField(verbose_name='Скважина', max_length=30, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата добавления')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата изменения')
+    is_active = models.BooleanField(default=True, verbose_name='Активная')
+    history = HistoricalRecords()
+    def __str__(self):
+        return self.well_number
+
+    class Meta:
+        verbose_name = 'Скважина'
+        verbose_name_plural = 'Скважины'
+
+
 class Location(models.Model):
     """Местонахождение оборудования"""
     location = models.CharField(verbose_name='Местонахождение', max_length=150, unique=True)
+    well_number = models.OneToOneField(Well,
+                                       verbose_name='Скважина',
+                                       on_delete=models.PROTECT,
+                                       related_name='location',
+                                       blank=True, null=True,
+                                       )
+    history = HistoricalRecords()
 
     def __str__(self):
-        return self.location
+        if not self.well_number:
+            return self.location
+        return f'{self.location}(скв. {self.well_number})'
 
     class Meta:
         verbose_name = 'Местонахождение'
@@ -107,7 +128,7 @@ class Location(models.Model):
 
 
 class TotalOperatingTime(models.Model):
-    """Суммароные наработки оборудования"""
+    """Суммарные наработки оборудования"""
     equipment_name = models.OneToOneField(Equipment,
                                           verbose_name='Оборудование',
                                           on_delete=models.CASCADE,
@@ -115,6 +136,7 @@ class TotalOperatingTime(models.Model):
     total_circulation = models.PositiveIntegerField(verbose_name='Часы общее', default=0)
     total_meters = models.PositiveIntegerField(verbose_name='Метры общее', default=0)
     changed_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return str(self.equipment_name.equipment_type) + ' № ' + str(self.equipment_name.serial_number)
@@ -140,19 +162,11 @@ class AssemblyRunTime(models.Model):
     meters = models.PositiveIntegerField(verbose_name='Пробурено метров за рейс')
     operation_date = models.DateField(verbose_name='Дата окончания рейса')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата/время добавления')
-    user = models.ForeignKey(User, verbose_name='Опреатор', on_delete=models.CASCADE, related_name='user')
+    user = models.ForeignKey(User, verbose_name='Оператор', on_delete=models.CASCADE, related_name='user')
+    history = HistoricalRecords()
 
     def __str__(self):
         return f'{str(self.equipment)} - наработка за рейс'
-    @transaction.atomic
-    def save(self, *args, **kwargs):
-        # Сначала вызываем метод save родительского класса
-        super().save(*args, **kwargs)
-        # Обновляем поля total_circulation и total_meters в связанной модели TotalOperatingTime
-        total_operating_time = self.equipment  # Получаем связанную запись TotalOperatingTime
-        total_operating_time.total_circulation += self.circulation  # Прибавляем часы
-        total_operating_time.total_meters += self.meters  # Прибавляем метры
-        total_operating_time.save()  # Сохраняем изменения
 
     class Meta:
         verbose_name = 'Наработка за рейс'
